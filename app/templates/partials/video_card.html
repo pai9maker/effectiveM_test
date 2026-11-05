@@ -1,0 +1,20 @@
+<article class="video-card" data-video-id="{{ v.id }}">
+  <a class="thumb" href="{{ v.url }}" aria-label="{{ v.title }}">
+    {% if v.thumbnail_url %}
+      <img src="{{ v.thumbnail_url }}" alt="" loading="lazy" width="360" height="202">
+    {% else %}
+      <div class="thumb-placeholder">{{ svg_icon('film') }}</div>
+    {% endif %}
+    {% if v.duration and v.duration != '0:00' %}<span class="duration">{{ v.duration }}</span>{% endif %}
+  </a>
+  <div class="meta">
+    <a class="avatar sm" href="{{ v.owner_url }}" aria-label="{{ v.owner }}">
+      <img src="{{ v.avatar_url }}" alt="" loading="lazy" width="36" height="36">
+    </a>
+    <div class="meta-text">
+      <a class="video-title" href="{{ v.url }}">{{ v.title }}</a>
+      <a class="channel-name" href="{{ v.owner_url }}">{{ v.owner }}</a>
+      <div class="video-stats">{{ v.views }} · {{ v.age }}</div>
+    </div>
+  </div>
+</article>

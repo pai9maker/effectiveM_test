@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ channel.display_name }} — {{ app_name }}{% endblock %}
+{% block page %}channel{% endblock %}
+
+{% block content %}
+<div class="channel-banner" {% if channel.banner_key %}style="--banner: url('/api/v1/users/{{ channel.username }}/banner')"{% endif %}></div>
+
+<div class="channel-head">
+  <img class="channel-avatar" src="/api/v1/users/{{ channel.username }}/avatar" alt="">
+  <div class="channel-info">
+    <h1>{{ channel.display_name }}</h1>
+    <div class="channel-meta">
+      <span>@{{ channel.username }}</span>
+      <span>{{ channel.subscribers_count | subscribers }}</span>
+      <span>{{ videos_total | videos_count }}</span>
+    </div>
+    {% if channel.bio %}<p class="channel-bio">{{ channel.bio }}</p>{% endif %}
+  </div>
+  <div class="channel-actions">
+    {% if is_owner %}
+      <a class="btn chip-btn" href="/studio">{{ svg_icon('settings') }} Управление</a>
+    {% else %}
+      <button class="btn subscribe {% if subscribed %}subscribed{% endif %}" type="button"
+              data-action="subscribe" data-channel="{{ channel.username }}">
+        {% if subscribed %}Вы подписаны{% else %}Подписаться{% endif %}
+      </button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="channel-tabs">
+  <a class="tab {% if tab == 'videos' %}active{% endif %}" href="/@{{ channel.username }}?tab=videos">Видео</a>
+  <a class="tab {% if tab == 'playlists' %}active{% endif %}" href="/@{{ channel.username }}?tab=playlists">Плейлисты</a>
+  <a class="tab {% if tab == 'about' %}active{% endif %}" href="/@{{ channel.username }}?tab=about">О канале</a>
+</div>
+
+{% if tab == 'playlists' %}
+  {% if playlists %}
+  <div class="playlist-grid">
+    {% for p in playlists %}
+    <a class="playlist-card" href="/playlist/{{ p.id }}">
+      <div class="playlist-cover">{{ svg_icon('library') }}<span>{{ p.items | length }}</span></div>
+      <div class="playlist-title">{{ p.title }}</div>
+      <div class="muted">Плейлист · {{ p.visibility.value }}</div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">{{ svg_icon('library') }}<h2>Нет плейлистов</h2></div>
+  {% endif %}
+{% elif tab == 'about' %}
+  <div class="about-box">
+    <h2>Описание</h2>
+    <p>{{ channel.bio or 'Автор пока не добавил описание.' }}</p>
+    <h2>Статистика</h2>
+    <p>{{ channel.subscribers_count | subscribers }} · {{ videos_total | videos_count }}</p>
+    <h2>Подробнее</h2>
+    <p>Канал создан {{ channel.created_at | date_ru }}{% if channel.created_at %} г.{% endif %}</p>
+  </div>
+{% else %}
+  {% if videos %}
+  <div class="video-grid">
+    {% for v in videos %}
+      {% include "partials/video_card.html" %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">{{ svg_icon('film') }}<h2>На канале пока нет видео</h2></div>
+  {% endif %}
+{% endif %}
+{% endblock %}

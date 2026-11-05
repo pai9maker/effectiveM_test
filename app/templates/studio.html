@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Творческая студия — {{ app_name }}{% endblock %}
+{% block page %}studio{% endblock %}
+
+{% block content %}
+<div class="studio-head">
+  <h1>Творческая студия</h1>
+  <a class="btn primary" href="/upload">{{ svg_icon('upload') }} Загрузить видео</a>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-studio-tab="videos" type="button">Видео</button>
+  <button class="tab" data-studio-tab="playlists" type="button">Плейлисты</button>
+</div>
+
+<section data-studio-panel="videos">
+  {% if videos %}
+  <div class="studio-table">
+    <div class="studio-row studio-header">
+      <span>Видео</span><span>Доступ</span><span>Статус</span><span>Просмотры</span><span></span>
+    </div>
+    {% for v in videos %}
+    <div class="studio-row" data-video-row="{{ v.id }}">
+      <div class="studio-video">
+        <div class="studio-thumb">
+          {% if v.thumbnail_url %}<img src="{{ v.thumbnail_url }}" alt="">{% else %}<div class="thumb-placeholder">{{ svg_icon('film') }}</div>{% endif %}
+        </div>
+        <div>
+          <a class="video-title" href="{{ v.url }}">{{ v.title }}</a>
+          <div class="muted">{{ v.created | date_ru }}</div>
+          {% if v.moderation != 'visible' %}<div class="badge danger">модерация: {{ v.moderation }}</div>{% endif %}
+        </div>
+      </div>
+      <div><span class="badge">{{ v.visibility }}</span></div>
+      <div>
+        {% if v.video_status == 'ready' %}<span class="badge ok">готово</span>
+        {% elif v.video_status == 'failed' %}<span class="badge danger">ошибка</span>
+        {% else %}<span class="badge warn" data-processing-id="{{ v.id }}">{{ v.video_status }}</span>{% endif %}
+      </div>
+      <div class="muted">{{ v.views_count }}</div>
+      <div class="studio-actions">
+        <button class="icon-btn" type="button" data-action="video-edit" data-video="{{ v.id }}"
+                data-title="{{ v.title }}" data-description="{{ v.description }}"
+                data-visibility="{{ v.visibility }}" aria-label="Изменить">{{ svg_icon('edit') }}</button>
+        <button class="icon-btn" type="button" data-action="video-delete" data-video="{{ v.id }}" aria-label="Удалить">{{ svg_icon('trash') }}</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">{{ svg_icon('videos') }}<h2>У вас пока нет видео</h2><a class="btn primary" href="/upload">Загрузить</a></div>
+  {% endif %}
+</section>
+
+<section data-studio-panel="playlists" hidden>
+  <form class="playlist-create" data-form="playlist-create">
+    <input name="title" placeholder="Название плейлиста" maxlength="150" required>
+    <select name="visibility">
+      <option value="public">Открытый</option>
+      <option value="unlisted">По ссылке</option>
+      <option value="private">Приватный</option>
+    </select>
+    <button class="btn primary" type="submit">Создать</button>
+  </form>
+  {% if playlists %}
+  <div class="playlist-grid">
+    {% for p in playlists %}
+    <a class="playlist-card" href="/playlist/{{ p.id }}">
+      <div class="playlist-cover">{{ svg_icon('library') }}</div>
+      <div class="playlist-title">{{ p.title }}</div>
+      <div class="muted">{{ p.visibility.value }} · {{ p.items | length }} видео</div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">{{ svg_icon('library') }}<h2>Плейлистов пока нет</h2></div>
+  {% endif %}
+</section>
+
+<div class="modal" id="edit-modal" hidden>
+  <div class="modal-card">
+    <h3>Изменить видео</h3>
+    <form data-form="video-edit">
+      <input type="hidden" name="video_id">
+      <label class="field"><span>Название</span><input name="title" maxlength="200" required></label>
+      <label class="field"><span>Описание</span><textarea name="description" rows="4" maxlength="5000"></textarea></label>
+      <label class="field"><span>Доступ</span>
+        <select name="visibility">
+          <option value="public">Открытый</option>
+          <option value="unlisted">По ссылке</option>
+          <option value="private">Приватный</option>
+        </select>
+      </label>
+      <div class="modal-actions">
+        <button class="btn ghost" type="button" data-action="modal-close">Отмена</button>
+        <button class="btn primary" type="submit">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

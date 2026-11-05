@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}{{ video.title }} — {{ app_name }}{% endblock %}
+{% block page %}watch{% endblock %}
+
+{% block content %}
+{% if moderation_status != 'visible' %}
+<div class="alert warning">
+  {{ svg_icon('shield') }}
+  <span>Видео скрыто модерацией (статус: {{ moderation_status }}). Его видят только владелец и модераторы.</span>
+</div>
+{% endif %}
+{% if video_status == 'failed' %}
+<div class="alert danger">
+  {{ svg_icon('x') }}
+  <span>Обработка видео не удалась{% if failure_reason %}: {{ failure_reason }}{% endif %}.</span>
+</div>
+{% endif %}
+
+<div class="watch-layout" data-watch data-video-id="{{ video_id }}">
+  <div class="watch-main">
+    <div class="player-wrap">
+      {% if can_watch %}
+      <video id="player" class="player" controls playsinline preload="metadata"
+             poster="{% if video.thumbnail_url %}{{ video.thumbnail_url }}{% endif %}"
+             src="/api/v1/videos/{{ video_id }}/stream"></video>
+      {% else %}
+      <div class="player-placeholder">
+        {{ svg_icon('clock') }}
+        <p>{% if video_status in ['uploading', 'processing'] %}Видео обрабатывается — обновите страницу через минуту{% elif visibility == 'private' %}Это приватное видео. Доступ есть только у владельца и приглашённых зрителей{% else %}Видео недоступно{% endif %}</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <h1 class="watch-title" id="video-title">{{ video.title }}</h1>
+
+    <div class="watch-actions">
+      <div class="watch-owner">
+        <a class="avatar" href="{{ video.owner_url }}">
+          <img src="{{ video.avatar_url }}" alt="">
+        </a>
+        <div class="watch-owner-text">
+          <a class="channel-name" href="{{ video.owner_url }}">{{ video.owner }}</a>
+          <span class="subs">{{ owner_subs | subscribers }}</span>
+        </div>
+        {% if user and user.username == video.owner_username %}
+          <a class="btn chip-btn" href="/studio">Управлять</a>
+        {% else %}
+          <button class="btn subscribe {% if subscribed %}subscribed{% endif %}" type="button"
+                  data-action="subscribe" data-channel="{{ video.owner_username }}">
+            {% if subscribed %}Вы подписаны{% else %}Подписаться{% endif %}
+          </button>
+        {% endif %}
+      </div>
+
+      <div class="watch-buttons">
+        <div class="like-group">
+          <button class="pill-btn like {% if my_like == 1 %}active{% endif %}" type="button"
+                  data-action="like" data-value="1" data-video="{{ video_id }}">
+            {{ svg_icon('like') }}<span data-like-count>{{ likes }}</span>
+          </button>
+          <span class="divider"></span>
+          <button class="pill-btn dislike {% if my_like == -1 %}active{% endif %}" type="button"
+                  data-action="like" data-value="-1" data-video="{{ video_id }}">
+            {{ svg_icon('dislike') }}<span data-dislike-count>{{ dislikes }}</span>
+          </button>
+        </div>
+        <button class="pill-btn" type="button" data-action="share" data-video="{{ video_id }}">
+          {{ svg_icon('share') }}<span>Поделиться</span>
+        </button>
+        {% if user %}
+        <div class="save-wrap" data-dropdown>
+          <button class="pill-btn" type="button" data-dropdown-toggle>
+            {{ svg_icon('save') }}<span>Сохранить</span>
+          </button>
+          <div class="dropdown" data-dropdown-menu hidden>
+            <div class="dropdown-head"><strong>Сохранить в плейлист</strong></div>
+            {% for p in my_playlists %}
+            <button type="button" data-action="playlist-add" data-playlist="{{ p.id }}" data-video="{{ video_id }}">{{ p.title }}</button>
+            {% endfor %}
+            <button type="button" data-action="playlist-create" data-video="{{ video_id }}">＋ Новый плейлист</button>
+          </div>
+        </div>
+        {% endif %}
+        <button class="pill-btn" type="button" data-action="report" data-video="{{ video_id }}" {% if not user %}data-requires-auth="1"{% endif %}>
+          {{ svg_icon('flag') }}<span>Жалоба</span>
+        </button>
+        {% if can_manage %}
+        <a class="pill-btn" href="/studio">{{ svg_icon('edit') }}<span>Изменить</span></a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="description-box" id="description">
+      <div class="description-stats">{{ video.views }} · {{ video.age }}</div>
+      <div class="description-text {% if not description %}empty{% endif %}">
+        {% if description %}{{ description }}{% else %}Описание не добавлено.{% endif %}
+      </div>
+    </div>
+
+    {% if is_owner %}
+    <div class="acl-box">
+      <div class="acl-head">{{ svg_icon('lock') }}<strong>Доступ к приватному видео</strong>
+        <span class="muted">Видимость: {{ visibility }}</span>
+      </div>
+      <p class="muted">Добавьте зрителей по имени пользователя — только они увидят видео, если оно приватное.</p>
+      {% if granted_names %}
+      <div class="acl-list">
+        {% for name in granted_names %}
+        <span class="acl-chip">@{{ name }}
+          <button type="button" data-action="access-revoke" data-video="{{ video_id }}" data-user="{{ name }}" aria-label="Убрать доступ">{{ svg_icon('x') }}</button>
+        </span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <form class="acl-form" data-form="access-grant" data-video="{{ video_id }}">
+        <input name="username" placeholder="username" autocomplete="off" required minlength="3">
+        <button class="btn" type="submit">Добавить</button>
+      </form>
+    </div>
+    {% endif %}
+
+    <section class="comments" id="comments" data-comments data-video="{{ video_id }}">
+      <div class="comments-head">
+        <h2>{{ comments_total }} {{ comments_total | plural('комментарий', 'комментария', 'комментариев') }}</h2>
+      </div>
+      {% if user %}
+      <form class="comment-form" data-form="comment" data-video="{{ video_id }}">
+        <img class="avatar sm" src="/api/v1/users/{{ user.username }}/avatar" alt="">
+        <div class="comment-input-wrap">
+          <textarea name="body" rows="1" placeholder="Введите комментарий..." maxlength="2000" required></textarea>
+          <div class="comment-form-actions">
+            <button class="btn ghost" type="button" data-action="comment-cancel">Отмена</button>
+            <button class="btn primary" type="submit" disabled data-comment-submit>Отправить</button>
+          </div>
+        </div>
+      </form>
+      {% else %}
+      <p class="muted"><a href="/login">Войдите</a>, чтобы оставить комментарий.</p>
+      {% endif %}
+      <div class="comment-list" data-comment-list>
+        {% for c in comments %}
+          {% include "partials/comment.html" %}
+        {% endfor %}
+      </div>
+      {% if comments_total > comments | length %}
+      <button class="btn ghost load-more" type="button" data-action="comments-more" data-video="{{ video_id }}">Показать ещё</button>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="watch-side">
+    <h2 class="side-title">Следующие</h2>
+    {% for v in recommendations %}
+    <a class="side-card" href="{{ v.url }}">
+      <div class="side-thumb">
+        {% if v.thumbnail_url %}<img src="{{ v.thumbnail_url }}" alt="" loading="lazy">{% else %}<div class="thumb-placeholder">{{ svg_icon('film') }}</div>{% endif %}
+        {% if v.duration and v.duration != '0:00' %}<span class="duration">{{ v.duration }}</span>{% endif %}
+      </div>
+      <div class="side-text">
+        <div class="side-title-text">{{ v.title }}</div>
+        <div class="side-channel">{{ v.owner }}</div>
+        <div class="side-stats">{{ v.views }} · {{ v.age }}</div>
+      </div>
+    </a>
+    {% endfor %}
+  </aside>
+</div>
+
+<div class="modal" id="report-modal" hidden>
+  <div class="modal-card">
+    <h3>Пожаловаться на видео</h3>
+    <form data-form="report">
+      <label>Причина
+        <select name="reason">
+          <option value="spam">Спам или мошенничество</option>
+          <option value="nudity">Откровенный контент</option>
+          <option value="violence">Насилие</option>
+          <option value="harassment">Оскорбления</option>
+          <option value="misinformation">Дезинформация</option>
+          <option value="copyright">Нарушение авторских прав</option>
+          <option value="other">Другое</option>
+        </select>
+      </label>
+      <label>Комментарий<textarea name="details" rows="3" maxlength="2000"></textarea></label>
+      <div class="modal-actions">
+        <button class="btn ghost" type="button" data-action="modal-close">Отмена</button>
+        <button class="btn primary" type="submit">Отправить жалобу</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

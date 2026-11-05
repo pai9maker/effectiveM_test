@@ -1,0 +1,156 @@
+# EffectiveTube — full stack: PostgreSQL, Redis, MinIO, API/SSR app, Celery worker.
+# One command: ./deploy.sh   (or: docker compose up -d --build)
+
+name: effectivetube
+
+x-app-env: &app-env
+  APP_NAME: ${APP_NAME:-EffectiveTube}
+  ENV: ${ENV:-production}
+  DEBUG: ${DEBUG:-false}
+  SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+  BASE_URL: ${BASE_URL:-http://localhost}
+  DATABASE_URL: postgresql+asyncpg://app:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/app
+  SYNC_DATABASE_URL: postgresql+psycopg://app:${POSTGRES_PASSWORD}@db:5432/app
+  REDIS_URL: redis://redis:6379/0
+  S3_ENDPOINT: http://minio:9000
+  S3_ACCESS_KEY: ${MINIO_ROOT_USER:-etstorage}
+  S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+  S3_BUCKET: ${S3_BUCKET:-media}
+  S3_REGION: us-east-1
+  S3_USE_SSL: "false"
+  ACCESS_TOKEN_TTL_MINUTES: ${ACCESS_TOKEN_TTL_MINUTES:-30}
+  REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-14}
+  COOKIE_SECURE: ${COOKIE_SECURE:-false}
+  MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-2147483648}
+  MAX_VIDEO_DURATION_SEC: ${MAX_VIDEO_DURATION_SEC:-14400}
+  TRANSCODE_TARGET_HEIGHT: ${TRANSCODE_TARGET_HEIGHT:-720}
+  DEMO_PASSWORD: ${DEMO_PASSWORD:-DemoPass123!}
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: app
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [internal]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [internal]
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-etstorage}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    ports:
+      - "127.0.0.1:9001:9001"
+    networks: [internal]
+
+  migrate:
+    build: .
+    image: effectivetube/app:local
+    command: ["alembic", "upgrade", "head"]
+    env_file: [.env]
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [internal]
+    restart: "no"
+
+  app:
+    build: .
+    image: effectivetube/app:local
+    restart: unless-stopped
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --proxy-headers
+      - --forwarded-allow-ips
+      - "*"
+      - --workers
+      - "2"
+    env_file: [.env]
+    environment: *app-env
+    ports:
+      - "${HTTP_PORT:-80}:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks: [internal]
+
+  worker:
+    build: .
+    image: effectivetube/app:local
+    restart: unless-stopped
+    command:
+      - celery
+      - -A
+      - app.workers.celery_app
+      - worker
+      - --loglevel=INFO
+      - --concurrency=2
+      - -Q
+      - video
+    env_file: [.env]
+    environment: *app-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks: [internal]
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+
+networks:
+  internal:
+    driver: bridge

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — {{ app_name }}{% endblock %}
+{% block page %}library{% endblock %}
+
+{% block content %}
+<h1 class="page-title">{{ title }}</h1>
+{% if videos %}
+<div class="video-grid">
+  {% for v in videos %}
+    {% include "partials/video_card.html" %}
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">{{ svg_icon('history') }}<h2>{{ empty_text }}</h2><a class="btn primary" href="/">На главную</a></div>
+{% endif %}
+{% endblock %}

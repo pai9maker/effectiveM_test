@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Модерация — {{ app_name }}{% endblock %}
+{% block page %}moderation{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Модерация</h1>
+
+<div class="stat-cards">
+  <div class="stat-card"><span class="stat-value">{{ stats.open }}</span><span class="muted">Открытые жалобы</span></div>
+  <div class="stat-card"><span class="stat-value">{{ stats.hidden }}</span><span class="muted">Скрытые видео</span></div>
+  <div class="stat-card"><span class="stat-value">{{ stats.removed }}</span><span class="muted">Удалённые модерацией</span></div>
+</div>
+
+<div class="tabs">
+  <a class="tab {% if status_filter == 'open' %}active{% endif %}" href="/moderation?status_filter=open">Открытые</a>
+  <a class="tab {% if status_filter == 'actioned' %}active{% endif %}" href="/moderation?status_filter=actioned">Обработанные</a>
+  <a class="tab {% if status_filter == 'dismissed' %}active{% endif %}" href="/moderation?status_filter=dismissed">Отклонённые</a>
+</div>
+
+{% if reports %}
+<div class="report-list">
+  {% for r in reports %}
+  <article class="report-card" data-report-id="{{ r.id }}">
+    <a class="report-thumb" href="{{ r.video.url }}">
+      {% if r.video.thumbnail_url %}<img src="{{ r.video.thumbnail_url }}" alt="">{% else %}<div class="thumb-placeholder">{{ svg_icon('film') }}</div>{% endif %}
+    </a>
+    <div class="report-body">
+      <a class="video-title" href="{{ r.video.url }}">{{ r.video.title }}</a>
+      <div class="muted">Автор: {{ r.video.owner }} · {{ r.video.views }} · {{ r.age }}</div>
+      <div class="report-reason"><span class="badge warn">{{ r.reason }}</span></div>
+      {% if r.details %}<p class="report-details">{{ r.details }}</p>{% endif %}
+      <div class="muted report-meta">Жалоба от @{{ r.reporter }}</div>
+      {% if status_filter == 'open' %}
+      <div class="report-actions">
+        <button class="btn ghost" type="button" data-action="report-resolve" data-report="{{ r.id }}" data-resolution="dismiss">Отклонить</button>
+        <button class="btn warn" type="button" data-action="report-resolve" data-report="{{ r.id }}" data-resolution="hide">Скрыть видео</button>
+        <button class="btn danger" type="button" data-action="report-resolve" data-report="{{ r.id }}" data-resolution="remove">Удалить видео</button>
+      </div>
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">{{ svg_icon('shield') }}<h2>Жалоб нет</h2><p>Очередь модерации пуста.</p></div>
+{% endif %}
+{% endblock %}

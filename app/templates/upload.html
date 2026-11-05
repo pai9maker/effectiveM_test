@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Загрузка видео — {{ app_name }}{% endblock %}
+{% block page %}upload{% endblock %}
+
+{% block content %}
+<div class="upload-page" data-upload data-max-mb="{{ max_upload_mb }}">
+  <div class="upload-head">
+    <h1>Загрузка видео</h1>
+    <p class="muted">Файл до {{ max_upload_mb }} МБ. Поддерживаются MP4, MOV, WebM, MKV и AVI.</p>
+  </div>
+
+  <form class="upload-grid" data-form="upload" novalidate>
+    <section class="upload-left">
+      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Выбрать файл">
+        <input type="file" name="file" id="file-input" accept="video/mp4,video/quicktime,video/webm,video/x-matroska,video/x-msvideo" hidden>
+        <div class="dropzone-empty" data-dropzone-empty>
+          {{ svg_icon('upload') }}
+          <p><strong>Перетащите видео</strong> или выберите файл на устройстве</p>
+          <span class="muted">MP4, MOV, WebM, MKV, AVI</span>
+        </div>
+        <div class="dropzone-file" data-dropzone-file hidden>
+          <div class="file-chip">
+            {{ svg_icon('film') }}
+            <div>
+              <div data-file-name></div>
+              <div class="muted" data-file-size></div>
+            </div>
+            <button class="icon-btn" type="button" data-action="file-clear" aria-label="Убрать файл">{{ svg_icon('x') }}</button>
+          </div>
+          <div class="upload-progress" hidden data-progress-wrap>
+            <div class="progress-bar"><span data-progress-bar></span></div>
+            <div class="progress-meta"><span data-progress-text>0%</span><span data-progress-status></span></div>
+          </div>
+        </div>
+      </div>
+      <p class="hint">{{ svg_icon('lock') }} Видео хранится в приватном объектном хранилище и раздаётся только через приложение.</p>
+    </section>
+
+    <section class="upload-right">
+      <label class="field">
+        <span>Название (обязательно)</span>
+        <input name="title" maxlength="200" required placeholder="Добавьте название">
+      </label>
+      <label class="field">
+        <span>Описание</span>
+        <textarea name="description" rows="6" maxlength="5000" placeholder="Расскажите о видео"></textarea>
+      </label>
+      <fieldset class="field radio-field">
+        <legend>Доступ</legend>
+        <label><input type="radio" name="visibility" value="public" checked> <strong>Открытый</strong> — виден всем</label>
+        <label><input type="radio" name="visibility" value="unlisted"> <strong>По ссылке</strong> — не показывается в ленте и поиске</label>
+        <label><input type="radio" name="visibility" value="private"> <strong>Приватный</strong> — только владелец и приглашённые</label>
+      </fieldset>
+      {% if playlists %}
+      <label class="field">
+        <span>Добавить в плейлист</span>
+        <select name="playlist_id">
+          <option value="">Не добавлять</option>
+          {% for p in playlists %}<option value="{{ p.id }}">{{ p.title }}</option>{% endfor %}
+        </select>
+      </label>
+      {% endif %}
+      <div class="upload-actions">
+        <a class="btn ghost" href="/studio">Отмена</a>
+        <button class="btn primary" type="submit" data-upload-submit disabled>Загрузить</button>
+      </div>
+      <div class="upload-status" hidden data-upload-status></div>
+    </section>
+  </form>
+</div>
+{% endblock %}

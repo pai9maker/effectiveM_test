@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body class="auth-body" data-page="auth" data-csrf="{{ csrf_token }}" data-auth="0">
+  <div class="auth-top">
+    <a class="brand" href="/">
+      {{ youtube_play }}
+      <span class="brand-name">{{ app_name }}</span>
+      <span class="brand-country">RU</span>
+    </a>
+  </div>
+
+  <main class="auth-card">
+    {% block content %}{% endblock %}
+  </main>
+
+  <div class="toast-stack" id="toasts" aria-live="polite"></div>
+  <script src="/static/js/app.js" defer></script>
+</body>
+</html>

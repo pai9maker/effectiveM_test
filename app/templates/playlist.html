@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ playlist.title }} — {{ app_name }}{% endblock %}
+{% block page %}playlist{% endblock %}
+
+{% block content %}
+<div class="playlist-page" data-playlist-id="{{ playlist.id }}">
+  <aside class="playlist-panel">
+    <div class="playlist-panel-cover">{{ svg_icon('library') }}</div>
+    <h1>{{ playlist.title }}</h1>
+    <div class="muted">{{ owner.display_name if owner else '' }}</div>
+    <div class="muted">{{ playlist.visibility.value }} · {{ videos | length }} видео</div>
+    {% if playlist.description %}<p class="playlist-desc">{{ playlist.description }}</p>{% endif %}
+    {% if is_owner %}
+    <button class="btn ghost danger-text" type="button" data-action="playlist-delete" data-playlist="{{ playlist.id }}">Удалить плейлист</button>
+    {% endif %}
+  </aside>
+
+  <section class="playlist-videos">
+    {% for v in videos %}
+    <article class="result-card" data-playlist-video="{{ v.id }}">
+      <a class="result-thumb small" href="{{ v.url }}">
+        {% if v.thumbnail_url %}<img src="{{ v.thumbnail_url }}" alt="" loading="lazy">{% else %}<div class="thumb-placeholder">{{ svg_icon('film') }}</div>{% endif %}
+        {% if v.duration and v.duration != '0:00' %}<span class="duration">{{ v.duration }}</span>{% endif %}
+      </a>
+      <div class="result-body">
+        <a class="result-title" href="{{ v.url }}">{{ v.title }}</a>
+        <div class="result-stats">{{ v.owner }} · {{ v.views }}</div>
+      </div>
+      {% if is_owner %}
+      <button class="icon-btn" type="button" data-action="playlist-remove"
+              data-playlist="{{ playlist.id }}" data-video="{{ v.id }}" aria-label="Убрать из плейлиста">{{ svg_icon('x') }}</button>
+      {% endif %}
+    </article>
+    {% endfor %}
+    {% if not videos %}
+    <div class="empty-state">{{ svg_icon('film') }}<h2>В плейлисте пока нет видео</h2></div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

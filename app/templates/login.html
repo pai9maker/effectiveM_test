@@ -1,0 +1,24 @@
+{% extends "auth_base.html" %}
+{% block title %}Вход — {{ app_name }}{% endblock %}
+{% block content %}
+<h1>Вход</h1>
+<p class="muted">Чтобы продолжить, войдите в аккаунт {{ app_name }}</p>
+
+<form class="auth-form" data-form="login" data-next="{{ next }}">
+  <label class="field">
+    <span>Email или имя пользователя</span>
+    <input name="login" autocomplete="username" required minlength="3">
+  </label>
+  <label class="field">
+    <span>Пароль</span>
+    <input name="password" type="password" autocomplete="current-password" required minlength="1">
+  </label>
+  <div class="form-error" data-form-error hidden></div>
+  <div class="auth-actions">
+    <a class="btn ghost" href="/register">Создать аккаунт</a>
+    <button class="btn primary" type="submit">Далее</button>
+  </div>
+</form>
+
+<p class="auth-note">Демо-аккаунты: <code>viewer / DemoPass123!</code>, <code>moderator / DemoPass123!</code>, <code>admin / DemoPass123!</code></p>
+{% endblock %}

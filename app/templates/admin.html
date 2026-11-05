@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Администрирование — {{ app_name }}{% endblock %}
+{% block page %}admin{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Администрирование</h1>
+
+<section class="admin-section">
+  <h2>Пользователи</h2>
+  <div class="admin-table">
+    <div class="admin-row admin-header">
+      <span>Пользователь</span><span>Роль</span><span>Статус</span><span>Регистрация</span>
+    </div>
+    {% for u in users %}
+    <div class="admin-row" data-user-row="{{ u.id }}">
+      <div class="admin-user">
+        <img class="avatar sm" src="/api/v1/users/{{ u.username }}/avatar" alt="">
+        <div>
+          <div>{{ u.display_name }}</div>
+          <div class="muted">@{{ u.username }} · {{ u.email }}</div>
+        </div>
+      </div>
+      <div>
+        <select data-action="role-change" data-user="{{ u.id }}" {% if u.id == user.id %}disabled{% endif %}>
+          <option value="user" {% if u.role.value == 'user' %}selected{% endif %}>Пользователь</option>
+          <option value="moderator" {% if u.role.value == 'moderator' %}selected{% endif %}>Модератор</option>
+          <option value="admin" {% if u.role.value == 'admin' %}selected{% endif %}>Администратор</option>
+        </select>
+      </div>
+      <div>
+        <button class="btn ghost small {% if u.is_active %}ok-text{% else %}danger-text{% endif %}"
+                type="button" data-action="active-toggle" data-user="{{ u.id }}"
+                data-active="{{ '1' if u.is_active else '0' }}" {% if u.id == user.id %}disabled{% endif %}>
+          {{ 'Активен' if u.is_active else 'Отключён' }}
+        </button>
+      </div>
+      <div class="muted">{{ u.created_at | date_ru }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="admin-section">
+  <h2>Журнал действий</h2>
+  <div class="audit-list">
+    {% for entry in audit %}
+    <div class="audit-row">
+      <span class="badge">{{ entry.action }}</span>
+      <span class="muted">{{ entry.entity_type }}{% if entry.entity_id %}: {{ entry.entity_id[:8] }}…{% endif %}</span>
+      <span class="muted">{{ entry.ip or '—' }}</span>
+      <span class="muted">{{ entry.created_at | time_ago }}</span>
+    </div>
+    {% endfor %}
+    {% if not audit %}<p class="muted">Пока нет записей.</p>{% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{% if query %}«{{ query }}» — поиск{% else %}Поиск{% endif %} — {{ app_name }}{% endblock %}
+{% block page %}search{% endblock %}
+
+{% block content %}
+{% if not query %}
+  <div class="empty-state">{{ svg_icon('search') }}<h2>Введите запрос</h2><p>Поиск работает по названиям видео и каналов.</p></div>
+{% else %}
+<div class="search-layout">
+  <div class="search-results">
+    {% if channels %}
+    <div class="channel-results">
+      {% for c in channels %}
+      <a class="channel-result" href="/@{{ c.username }}">
+        <img class="avatar" src="{{ c.avatar_url }}" alt="">
+        <div>
+          <div class="channel-result-name">{{ c.display_name }}</div>
+          <div class="muted">@{{ c.username }} · {{ c.subscribers_count | subscribers }}</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="muted result-count">{{ total | compact }} результатов по запросу «{{ query }}»</div>
+
+    {% for v in videos %}
+    <article class="result-card">
+      <a class="result-thumb" href="{{ v.url }}">
+        {% if v.thumbnail_url %}<img src="{{ v.thumbnail_url }}" alt="" loading="lazy">{% else %}<div class="thumb-placeholder">{{ svg_icon('film') }}</div>{% endif %}
+        {% if v.duration and v.duration != '0:00' %}<span class="duration">{{ v.duration }}</span>{% endif %}
+      </a>
+      <div class="result-body">
+        <a class="result-title" href="{{ v.url }}">{{ v.title }}</a>
+        <div class="result-stats">{{ v.views }} · {{ v.age }}</div>
+        <a class="result-channel" href="{{ v.owner_url }}">
+          <img class="avatar xs" src="{{ v.avatar_url }}" alt="">
+          <span>{{ v.owner }}</span>
+        </a>
+        <p class="result-desc">{{ v.title }}</p>
+      </div>
+    </article>
+    {% endfor %}
+
+    {% if not videos and not channels %}
+    <div class="empty-state">{{ svg_icon('search') }}<h2>Ничего не найдено</h2><p>Попробуйте изменить запрос.</p></div>
+    {% endif %}
+
+    {% if total > 20 %}
+    <div class="pager">
+      {% if page > 1 %}<a class="btn ghost" href="/results?search_query={{ query | urlencode }}&page={{ page - 1 }}">← Назад</a>{% endif %}
+      {% if page * 20 < total %}<a class="btn ghost" href="/results?search_query={{ query | urlencode }}&page={{ page + 1 }}">Вперёд →</a>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

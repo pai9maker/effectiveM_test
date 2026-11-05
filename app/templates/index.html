@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ app_name }}{% endblock %}
+{% block page %}home{% endblock %}
+
+{% block content %}
+<div class="chips" role="tablist" aria-label="Фильтр ленты">
+  <a class="chip {% if sort != 'popular' %}active{% endif %}" href="/">Все</a>
+  <a class="chip {% if sort == 'popular' %}active{% endif %}" href="/?sort=popular">Популярное</a>
+  <a class="chip" href="/results?search_query=музыка">Музыка</a>
+  <a class="chip" href="/results?search_query=игры">Игры</a>
+  <a class="chip" href="/results?search_query=новости">Новости</a>
+  <a class="chip" href="/results?search_query=подкаст">Подкасты</a>
+</div>
+
+{% if videos %}
+<div class="video-grid">
+  {% for v in videos %}
+    {% include "partials/video_card.html" %}
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  {{ svg_icon('film') }}
+  <h2>Пока нет видео</h2>
+  <p>Загрузите первое видео — оно появится здесь.</p>
+  <a class="btn primary" href="/upload">Загрузить видео</a>
+</div>
+{% endif %}
+{% endblock %}

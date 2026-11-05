@@ -1,0 +1,39 @@
+<div class="comment {% if c.is_deleted %}deleted{% endif %}" data-comment-id="{{ c.id }}">
+  {% if c.is_deleted %}
+    <div class="comment-body">
+      <div class="comment-text muted">{{ c.body }}</div>
+    </div>
+  {% else %}
+  <a href="{{ c.author_url }}"><img class="avatar sm" src="{{ c.avatar_url }}" alt=""></a>
+  <div class="comment-body">
+    <div class="comment-head">
+      <a class="comment-author" href="{{ c.author_url }}">@{{ c.author_username }}</a>
+      <span class="comment-age">{{ c.age }}</span>
+    </div>
+    <div class="comment-text">{{ c.body }}</div>
+    <div class="comment-actions">
+      {% if user %}
+      <button type="button" data-action="reply" data-comment="{{ c.id }}" data-author="{{ c.author_username }}">Ответить</button>
+      {% endif %}
+      {% if c.can_delete %}
+      <button type="button" data-action="comment-delete" data-comment="{{ c.id }}">Удалить</button>
+      {% endif %}
+    </div>
+    <form class="comment-form reply-form" hidden data-form="reply" data-comment="{{ c.id }}" data-video="{{ video_id }}">
+      <input type="hidden" name="parent_id" value="{{ c.id }}">
+      <textarea name="body" rows="1" placeholder="Ответ пользователю @{{ c.author_username }}" maxlength="2000" required></textarea>
+      <div class="comment-form-actions">
+        <button class="btn ghost" type="button" data-action="reply-cancel">Отмена</button>
+        <button class="btn primary" type="submit">Ответить</button>
+      </div>
+    </form>
+    {% if c.replies %}
+    <div class="replies">
+      {% for r in c.replies %}
+        {% with c = r %}{% include "partials/comment.html" %}{% endwith %}
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>

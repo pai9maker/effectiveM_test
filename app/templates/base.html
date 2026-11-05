@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="preconnect" href="/">
+  <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body data-page="{% block page %}{% endblock %}"
+      data-csrf="{{ csrf_token }}"
+      data-user="{% if user %}{{ user.username }}{% endif %}"
+      data-auth="{% if user %}1{% else %}0{% endif %}">
+<a class="skip-link" href="#main">Перейти к содержимому</a>
+
+<header class="masthead">
+  <div class="masthead-start">
+    <button class="icon-btn" id="sidebar-toggle" type="button" aria-label="Меню">
+      {{ svg_icon('menu') }}
+    </button>
+    <a class="brand" href="/" aria-label="{{ app_name }} — главная">
+      {{ youtube_play }}
+      <span class="brand-name">{{ app_name }}</span>
+      <span class="brand-country">RU</span>
+    </a>
+  </div>
+
+  <form class="masthead-search" action="/results" method="get" role="search">
+    <div class="search-box">
+      <input id="search-input" type="search" name="search_query" placeholder="Введите запрос"
+             autocomplete="off" aria-label="Поиск">
+      <button class="search-submit" type="submit" aria-label="Искать">
+        {{ svg_icon('search') }}
+      </button>
+    </div>
+  </form>
+
+  <div class="masthead-end">
+    <button class="icon-btn" id="theme-toggle" type="button" aria-label="Сменить тему">
+      <span class="icon-moon">{{ svg_icon('clock') }}</span>
+      <span class="icon-sun">{{ svg_icon('eye') }}</span>
+    </button>
+    <a class="icon-btn upload-shortcut" href="/upload" aria-label="Загрузить видео">
+      {{ svg_icon('upload') }}
+    </a>
+    <button class="icon-btn" type="button" aria-label="Уведомления">
+      {{ svg_icon('bell') }}
+    </button>
+    {% if user %}
+    <div class="account" data-dropdown>
+      <button class="avatar-btn" type="button" data-dropdown-toggle aria-label="Аккаунт">
+        <img src="/api/v1/users/{{ user.username }}/avatar" alt="">
+      </button>
+      <div class="dropdown" data-dropdown-menu hidden>
+        <div class="dropdown-head">
+          <img class="avatar" src="/api/v1/users/{{ user.username }}/avatar" alt="">
+          <div>
+            <strong>{{ user.display_name }}</strong>
+            <span>@{{ user.username }}</span>
+          </div>
+        </div>
+        <a href="/@{{ user.username }}">Мой канал</a>
+        <a href="/studio">Творческая студия</a>
+        <a href="/history">История просмотров</a>
+        {% if user.is_moderator %}<a href="/moderation">Модерация</a>{% endif %}
+        {% if user.is_admin %}<a href="/admin">Администрирование</a>{% endif %}
+        <button type="button" data-action="logout">Выйти</button>
+      </div>
+    </div>
+    {% else %}
+    <a class="signin-btn" href="/login">
+      {{ svg_icon('users') }}<span>Войти</span>
+    </a>
+    {% endif %}
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Навигация">
+    <div class="sidebar-section">
+      <a class="sidebar-item {% if active == 'home' %}active{% endif %}" href="/">{{ svg_icon('home') }}<span>Главная</span></a>
+      <a class="sidebar-item" href="/results?search_query=shorts">{{ svg_icon('shorts') }}<span>Shorts</span></a>
+      <a class="sidebar-item {% if active == 'subscriptions' %}active{% endif %}" href="/subscriptions">{{ svg_icon('subscriptions') }}<span>Подписки</span></a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Вы <a href="/studio">›</a></div>
+      <a class="sidebar-item {% if active == 'history' %}active{% endif %}" href="/history">{{ svg_icon('history') }}<span>История</span></a>
+      <a class="sidebar-item {% if active == 'studio' %}active{% endif %}" href="/studio">{{ svg_icon('videos') }}<span>Ваши видео</span></a>
+      <a class="sidebar-item {% if active == 'liked' %}active{% endif %}" href="/liked">{{ svg_icon('liked') }}<span>Понравившиеся</span></a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Ещё</div>
+      <a class="sidebar-item" href="/upload">{{ svg_icon('upload') }}<span>Загрузить</span></a>
+      {% if user and user.is_moderator %}
+      <a class="sidebar-item {% if active == 'moderation' %}active{% endif %}" href="/moderation">{{ svg_icon('shield') }}<span>Модерация</span></a>
+      {% endif %}
+      {% if user and user.is_admin %}
+      <a class="sidebar-item {% if active == 'admin' %}active{% endif %}" href="/admin">{{ svg_icon('settings') }}<span>Администрирование</span></a>
+      {% endif %}
+    </div>
+    <div class="sidebar-foot">
+      <p>О проекте · Пресса · Авторские права<br>Связаться · Авторы · Реклама</p>
+      <p>© {{ current_year }} {{ app_name }}</p>
+    </div>
+  </nav>
+  <div class="sidebar-scrim" id="sidebar-scrim" hidden></div>
+
+  <main class="content" id="main">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<div class="toast-stack" id="toasts" aria-live="polite"></div>
+
+<script src="/static/js/app.js" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

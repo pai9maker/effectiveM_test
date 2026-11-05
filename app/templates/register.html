@@ -1,0 +1,34 @@
+{% extends "auth_base.html" %}
+{% block title %}Регистрация — {{ app_name }}{% endblock %}
+{% block content %}
+<h1>Регистрация</h1>
+<p class="muted">Создайте аккаунт, чтобы загружать видео и комментировать</p>
+
+<form class="auth-form" data-form="register" data-next="{{ next }}">
+  <div class="auth-grid">
+    <label class="field">
+      <span>Имя и фамилия</span>
+      <input name="display_name" autocomplete="name" maxlength="80" required>
+    </label>
+    <label class="field">
+      <span>Имя пользователя</span>
+      <input name="username" autocomplete="username" required minlength="3" maxlength="40"
+             pattern="[A-Za-z0-9_.-]{3,40}">
+    </label>
+  </div>
+  <label class="field">
+    <span>Email</span>
+    <input name="email" type="email" autocomplete="email" required>
+  </label>
+  <label class="field">
+    <span>Пароль</span>
+    <input name="password" type="password" autocomplete="new-password" required minlength="10">
+    <small class="muted">Не менее 10 символов, буквы и цифры.</small>
+  </label>
+  <div class="form-error" data-form-error hidden></div>
+  <div class="auth-actions">
+    <a class="btn ghost" href="/login">У меня есть аккаунт</a>
+    <button class="btn primary" type="submit">Создать аккаунт</button>
+  </div>
+</form>
+{% endblock %}
