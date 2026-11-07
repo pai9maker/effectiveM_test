@@ -11,6 +11,9 @@ env/
 # Environment variables
 .env
 
+# Runtime secrets rendered from templates by deploy.sh
+infra/seaweedfs/s3.json
+
 # Docker
 docker-compose.override.yml
 

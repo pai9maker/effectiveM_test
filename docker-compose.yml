@@ -1,4 +1,6 @@
-# EffectiveTube — full stack: PostgreSQL, Redis, MinIO, API/SSR app, Celery worker.
+# EffectiveTube — full stack: PostgreSQL, Redis, S3-compatible storage
+# (SeaweedFS), FastAPI app and Celery worker.
+#
 # One command: ./deploy.sh   (or: docker compose up -d --build)
 
 name: effectivetube
@@ -7,14 +9,14 @@ x-app-env: &app-env
   APP_NAME: ${APP_NAME:-EffectiveTube}
   ENV: ${ENV:-production}
   DEBUG: ${DEBUG:-false}
-  SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
-  BASE_URL: ${BASE_URL:-http://localhost}
+  SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required — run ./deploy.sh to generate .env}
+  BASE_URL: ${BASE_URL:-http://localhost:8081}
   DATABASE_URL: postgresql+asyncpg://app:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/app
   SYNC_DATABASE_URL: postgresql+psycopg://app:${POSTGRES_PASSWORD}@db:5432/app
   REDIS_URL: redis://redis:6379/0
-  S3_ENDPOINT: http://minio:9000
-  S3_ACCESS_KEY: ${MINIO_ROOT_USER:-etstorage}
-  S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+  S3_ENDPOINT: http://storage:8333
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY is required}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
   S3_BUCKET: ${S3_BUCKET:-media}
   S3_REGION: us-east-1
   S3_USE_SSL: "false"
@@ -25,6 +27,14 @@ x-app-env: &app-env
   MAX_VIDEO_DURATION_SEC: ${MAX_VIDEO_DURATION_SEC:-14400}
   TRANSCODE_TARGET_HEIGHT: ${TRANSCODE_TARGET_HEIGHT:-720}
   DEMO_PASSWORD: ${DEMO_PASSWORD:-DemoPass123!}
+
+x-app-deps: &app-deps
+  db:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+  storage:
+    condition: service_healthy
 
 services:
   db:
@@ -47,7 +57,14 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
     volumes:
       - redisdata:/data
     healthcheck:
@@ -57,22 +74,29 @@ services:
       retries: 20
     networks: [internal]
 
-  minio:
-    image: minio/minio:latest
+  storage:
+    image: chrislusf/seaweedfs:latest
     restart: unless-stopped
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-etstorage}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+    # Monolithic mode: master + volume + filer + S3 gateway in one container.
+    command:
+      - server
+      - -dir=/data
+      - -s3
+      - -s3.port=8333
+      - -s3.config=/etc/seaweedfs/s3.json
+      - -master.port=9333
+      - -volume.port=8080
+      - -filer.port=8888
     volumes:
-      - miniodata:/data
+      - storagedata:/data
+      - ./infra/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      # S3 answers 403 to unauthenticated requests, so probe the TCP port instead.
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 8333"]
       interval: 5s
       timeout: 5s
       retries: 30
-    ports:
-      - "127.0.0.1:9001:9001"
+      start_period: 10s
     networks: [internal]
 
   migrate:
@@ -82,8 +106,7 @@ services:
     env_file: [.env]
     environment: *app-env
     depends_on:
-      db:
-        condition: service_healthy
+      <<: *app-deps
     networks: [internal]
     restart: "no"
 
@@ -106,20 +129,17 @@ services:
     env_file: [.env]
     environment: *app-env
     ports:
-      - "${HTTP_PORT:-80}:8000"
+      - "${HTTP_PORT:-8081}:8000"
     depends_on:
+      <<: *app-deps
       migrate:
         condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/healthz"]
       interval: 10s
       timeout: 5s
       retries: 12
-      start_period: 20s
+      start_period: 30s
     networks: [internal]
 
   worker:
@@ -138,18 +158,15 @@ services:
     env_file: [.env]
     environment: *app-env
     depends_on:
+      <<: *app-deps
       migrate:
         condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
     networks: [internal]
 
 volumes:
   pgdata:
   redisdata:
-  miniodata:
+  storagedata:
 
 networks:
   internal:
