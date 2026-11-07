@@ -97,7 +97,10 @@ async def refresh(request: Request, response: Response, db: DB):
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(request: Request, response: Response):
     await clear_session(response, request)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    # Return the injected response: clear_session adds the Set-Cookie headers
+    # that invalidate the session. Returning a new Response would discard them.
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response
 
 
 @router.get("/me", response_model=UserPublic)

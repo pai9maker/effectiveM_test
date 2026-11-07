@@ -17,7 +17,13 @@
   }
 
   function csrf() {
-    return body.dataset.csrf || "";
+    // The refresh endpoint rotates the CSRF cookie together with the session.
+    // Do not keep using the token rendered into the page before that rotation.
+    const cookie = document.cookie
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith("et_csrf="));
+    return cookie ? decodeURIComponent(cookie.slice("et_csrf=".length)) : (body.dataset.csrf || "");
   }
 
   async function refreshSession() {
