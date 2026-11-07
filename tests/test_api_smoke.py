@@ -96,3 +96,20 @@ def test_stream_supports_range_requests(client):
     assert response.status_code == 206
     assert len(response.content) == 1024
     assert response.headers["content-range"].startswith("bytes 0-1023/")
+
+
+def test_logout_clears_session_cookies(client):
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"login": "viewer", "password": DEMO_PASSWORD},
+    )
+    if login.status_code == 401:
+        pytest.skip("demo data is not seeded")
+    assert login.status_code == 200
+
+    csrf = client.cookies.get("et_csrf", "")
+    logout = client.post("/api/v1/auth/logout", headers={"X-CSRF-Token": csrf})
+    assert logout.status_code == 204
+    set_cookie = "\n".join(logout.headers.get_list("set-cookie"))
+    assert "et_access=" in set_cookie and "Max-Age=0" in set_cookie
+    assert "et_refresh=" in set_cookie and "et_csrf=" in set_cookie

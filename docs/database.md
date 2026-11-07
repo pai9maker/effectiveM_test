@@ -66,7 +66,8 @@ users 1 ──── * audit_log         (actor_id, SET NULL)
 ### `comments`
 Дерево глубины 1: `parent_id` ссылается на корневой комментарий; вложенные
 ответы запрещены на уровне API. `is_deleted` — soft delete, тело очищается.
-`CHECK char_length(body) BETWEEN 1 AND 2000`.
+`CHECK char_length(body) BETWEEN 1 AND 2000`. При удалении `is_deleted = true`,
+тело заменяется служебной заглушкой и не отдаётся API.
 
 ### `subscriptions`
 `(subscriber_id, channel_id)` — PK, `CHECK subscriber_id <> channel_id`.
