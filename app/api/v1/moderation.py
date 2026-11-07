@@ -5,18 +5,17 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, HTTPException, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
 from app.core.deps import DB, ModeratorUser, Paging
 from app.models.moderation import Report, ReportStatus
-from app.models.user import User
 from app.models.video import ModerationStatus, Video
 from app.schemas import ModerateVideoRequest, ResolveReportRequest
 from app.services.audit import record_audit
 from app.services.rate_limit import client_ip
-from app.services.serializers import video_card, video_detail
+from app.services.serializers import video_detail
 
 router = APIRouter(prefix="/moderation", tags=["moderation"])
 

@@ -12,7 +12,7 @@ from app.core.deps import DB, CurrentUser
 from app.core.security import hash_password, needs_rehash, verify_password
 from app.models.user import User, UserRole
 from app.schemas import LoginRequest, RegisterRequest, UserPublic
-from app.services.rate_limit import client_ip, rate_limit
+from app.services.rate_limit import rate_limit
 from app.services.serializers import user_public
 from app.services.session import clear_session, issue_session, rotate_refresh
 
@@ -51,7 +51,6 @@ async def register(payload: RegisterRequest, request: Request, response: Respons
 
 @router.post("/login", response_model=UserPublic)
 async def login(payload: LoginRequest, request: Request, response: Response, db: DB):
-    ip = client_ip(request)
     await rate_limit(request, "login-ip", settings.rate_limit_login)
     await rate_limit(request, "login-user", settings.rate_limit_login * 3, identity=payload.login.lower())
 

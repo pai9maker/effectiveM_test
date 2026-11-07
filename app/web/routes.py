@@ -12,15 +12,14 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.core.config import settings
-from app.core.deps import CurrentUserOptional, DB, Paging
+from app.core.deps import CurrentUserOptional, DB
 from app.models.moderation import AuditLog, Report, ReportStatus
 from app.models.playlist import Playlist, PlaylistItem, PlaylistVisibility
 from app.models.user import User
-from app.models.video import ModerationStatus, Video, VideoAccessGrant, VideoStatus, Visibility
+from app.models.video import ModerationStatus, Video, VideoAccessGrant, Visibility
 from app.services import videos as video_service
 from app.services.access import can_manage_video, can_view_video, can_watch_video
 from app.services.serializers import card_dict, comment_dict, user_public
-from app.services.storage import get_storage
 from app.web.templating import templates
 
 router = APIRouter(include_in_schema=False)

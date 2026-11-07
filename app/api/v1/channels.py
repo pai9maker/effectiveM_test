@@ -5,7 +5,6 @@ from __future__ import annotations
 from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
 from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.exc import IntegrityError
 
 from app.core.deps import DB, CurrentUser, CurrentUserOptional
 from app.models.social import Subscription

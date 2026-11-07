@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from fastapi import APIRouter
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from app.core.deps import DB, CurrentUserOptional, Paging
 from app.models.social import Subscription
-from app.models.user import User
-from app.schemas import Page, UserPublic, VideoCard
+from app.schemas import UserPublic, VideoCard
 from app.services import videos as video_service
 from app.services.serializers import user_public, video_card
 

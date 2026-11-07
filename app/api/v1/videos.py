@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import uuid
-from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Request, Response, UploadFile, status
 from fastapi.responses import StreamingResponse
@@ -40,10 +39,9 @@ from app.schemas import (
 from app.services import videos as video_service
 from app.services.access import can_manage_video, can_view_video, can_watch_video, is_video_public
 from app.services.http_range import parse_range
-from app.services.images import svg_avatar
 from app.services.queue import enqueue_video_processing
 from app.services.rate_limit import client_ip, rate_limit
-from app.services.serializers import card_dict, comment_dict, comment_public, video_card, video_detail
+from app.services.serializers import comment_public, video_card, video_detail
 from app.services.storage import StorageError, build_object_key, get_storage
 from app.services.video_formats import ALLOWED_CONTENT_TYPES, sniff_container
 

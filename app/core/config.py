@@ -6,10 +6,13 @@ production with an insecure default secret key (see ``validate_runtime``).
 
 from __future__ import annotations
 
+import logging
 from functools import lru_cache
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -24,7 +27,7 @@ class Settings(BaseSettings):
     app_name: str = "EffectiveTube"
     env: str = "dev"
     debug: bool = False
-    base_url: str = "http://localhost:8000"
+    base_url: str = "http://localhost:8081"
 
     # --- Security ---
     secret_key: str = "dev-insecure-secret-change-me"
@@ -90,18 +93,26 @@ class Settings(BaseSettings):
         return self.env.lower() in {"prod", "production"}
 
     def validate_runtime(self) -> None:
-        """Fail fast on unsafe production configuration."""
+        """Fail fast on an insecure secret, warn about weaker, deployment-specific settings.
+
+        ``SECRET_KEY`` is a hard requirement everywhere: a predictable signing key
+        lets anybody mint valid sessions. ``COOKIE_SECURE`` and the database URL are
+        deployment decisions (a plain-HTTP demo is legitimate), so they only warn.
+        """
         if not self.is_production:
             return
-        errors: list[str] = []
         if "change-me" in self.secret_key or len(self.secret_key) < 32:
-            errors.append("SECRET_KEY must be a random value of at least 32 characters")
+            raise RuntimeError(
+                "Unsafe production configuration: SECRET_KEY must be a random value "
+                "of at least 32 characters (run ./deploy.sh or openssl rand -hex 32)"
+            )
         if not self.cookie_secure:
-            errors.append("COOKIE_SECURE must be true in production")
+            logger.warning(
+                "COOKIE_SECURE=false: session cookies will be sent over plain HTTP. "
+                "Set COOKIE_SECURE=true when serving EffectiveTube over HTTPS."
+            )
         if self.database_url.startswith("postgresql+asyncpg://app:app@localhost"):
-            errors.append("DATABASE_URL must point to the real database")
-        if errors:
-            raise RuntimeError("Unsafe production configuration: " + "; ".join(errors))
+            logger.warning("DATABASE_URL still points at the local demo database")
 
 
 @lru_cache

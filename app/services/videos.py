@@ -7,10 +7,10 @@ from datetime import UTC, datetime
 
 from sqlalchemy import Select, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload
 
 from app.core.redis import get_redis
-from app.models.social import Comment, Subscription, VideoLike, ViewEvent, WatchHistory
+from app.models.social import Comment, Subscription, VideoLike, WatchHistory
 from app.models.user import User
 from app.models.video import ModerationStatus, Video, VideoAccessGrant, VideoStatus, Visibility
 
