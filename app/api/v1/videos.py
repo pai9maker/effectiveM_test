@@ -325,7 +325,9 @@ async def register_view(video_id: uuid.UUID, request: Request, db: DB, viewer: C
     video = await _get_video(db, video_id)
     await _assert_can_view(db, video, viewer)
     counted = await video_service.record_view(db, video, _viewer_key(request, viewer), viewer)
-    refreshed = await db.get(Video, video.id)
+    # The bulk UPDATE above expires the in-session object; reload it explicitly
+    # so reading counters cannot trigger a lazy load outside greenlet context.
+    refreshed = await db.get(Video, video.id, populate_existing=True)
     return {"counted": counted, "views": refreshed.views_count if refreshed else video.views_count}
 
 
@@ -356,7 +358,9 @@ async def like_video(video_id: uuid.UUID, payload: LikeRequest, user: CurrentUse
             )
         )
         await db.commit()
-    updated = await db.get(Video, video.id)
+    # The counter UPDATE expires the loaded row; force a fresh SELECT before
+    # reading attributes (lazy IO would fail outside the greenlet context).
+    updated = await db.get(Video, video.id, populate_existing=True)
     assert updated is not None
     return LikeState(likes=updated.likes_count, dislikes=updated.dislikes_count, my_value=new)
 
@@ -421,7 +425,9 @@ async def delete_comment(comment_id: uuid.UUID, user: CurrentUser, db: DB):
         raise HTTPException(status_code=403, detail="You cannot delete this comment")
     if not comment.is_deleted:
         comment.is_deleted = True
-        comment.body = ""
+        # The column has a 1..2000 length check, so keep a placeholder instead
+        # of an empty string; serializers already hide the body of deleted rows.
+        comment.body = "[deleted]"
         await db.execute(
             update(Video)
             .where(Video.id == comment.video_id)
