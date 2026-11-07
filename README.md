@@ -18,7 +18,7 @@ worker (Celery + FFmpeg) ──► ffprobe → 720p → JPEG-превью → S3
 сам, если запущен с `sudo`/от root).
 
 ```bash
-git clone <repo-url> effectiveM_test
+git clone https://github.com/pai9maker/effectiveM_test.git
 cd effectiveM_test
 ./deploy.sh
 ```
@@ -88,7 +88,7 @@ HTTP_PORT=80 ./deploy.sh
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt
-.venv/bin/python -m pytest            # 44 unit-теста
+.venv/bin/python -m pytest            # unit-тесты
 ```
 
 Интеграционный smoke-тест против запущенного стека:
@@ -139,6 +139,7 @@ ai-dialogs/      экспортированные сессии ИИ (как ес
 * [Тесты](docs/testing.md)
 * [Как использовался ИИ](docs/ai-workflow.md)
 * [Правила работы агентов](AGENTS.md)
+* [Правила разработки](CONTRIBUTING.md)
 
 ## Ограничения демо
 

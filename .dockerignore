@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+.venv
+__pycache__
+*.py[cod]
+.pytest_cache
+.ruff_cache
+.DS_Store
+*.log
+infra/seaweedfs/s3.json
+data
+seaweedfs_data
