@@ -8,6 +8,11 @@ Skipped by default. Run after ``./deploy.sh``:
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
+import tempfile
+import time
+import uuid
 
 import httpx
 import pytest
@@ -113,3 +118,110 @@ def test_logout_clears_session_cookies(client):
     set_cookie = "\n".join(logout.headers.get_list("set-cookie"))
     assert "et_access=" in set_cookie and "Max-Age=0" in set_cookie
     assert "et_refresh=" in set_cookie and "et_csrf=" in set_cookie
+
+
+def test_registration_upload_processing_stream_like_and_comment(client):
+    """Exercise the acceptance path against the real app and worker stack."""
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        pytest.skip("ffmpeg is required for the upload E2E test")
+
+    suffix = uuid.uuid4().hex[:12]
+    email = f"e2e-{suffix}@example.com"
+    username = f"e2e_{suffix}"
+    password = "E2EPass123!"
+    video_id = None
+    comment_id = None
+
+    with tempfile.NamedTemporaryFile(suffix=".mp4") as media:
+        subprocess.run(
+            [
+                ffmpeg,
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "testsrc2=size=160x120:rate=12",
+                "-t",
+                "1",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:v",
+                "libx264",
+                "-movflags",
+                "+faststart",
+                media.name,
+            ],
+            check=True,
+        )
+        try:
+            register = client.post(
+                "/api/v1/auth/register",
+                json={
+                    "email": email,
+                    "username": username,
+                    "display_name": "E2E Upload",
+                    "password": password,
+                },
+            )
+            assert register.status_code == 201, register.text
+            csrf = client.cookies.get("et_csrf", "")
+            headers = {"X-CSRF-Token": csrf}
+
+            create = client.post(
+                "/api/v1/videos",
+                headers=headers,
+                json={"title": "Automated E2E upload", "description": "acceptance test"},
+            )
+            assert create.status_code == 201, create.text
+            video_id = create.json()["id"]
+
+            with open(media.name, "rb") as source:
+                upload = client.post(
+                    f"/api/v1/videos/{video_id}/file",
+                    headers=headers,
+                    files={"file": ("e2e.mp4", source, "video/mp4")},
+                )
+            assert upload.status_code == 202, upload.text
+
+            status = None
+            for _ in range(60):
+                time.sleep(1)
+                details = client.get(f"/api/v1/videos/{video_id}")
+                assert details.status_code == 200, details.text
+                status = details.json()["status"]
+                if status in {"ready", "failed"}:
+                    break
+            assert status == "ready", details.text
+
+            stream = client.get(
+                f"/api/v1/videos/{video_id}/stream",
+                headers={"Range": "bytes=0-127"},
+            )
+            assert stream.status_code == 206, stream.text
+            assert len(stream.content) == 128
+            assert stream.headers["content-range"].startswith("bytes 0-127/")
+
+            like = client.put(
+                f"/api/v1/videos/{video_id}/like",
+                headers=headers,
+                json={"value": 1},
+            )
+            assert like.status_code == 200 and like.json()["my_value"] == 1
+
+            comment = client.post(
+                f"/api/v1/videos/{video_id}/comments",
+                headers=headers,
+                json={"body": "Automated E2E comment"},
+            )
+            assert comment.status_code == 201, comment.text
+            comment_id = comment.json()["id"]
+        finally:
+            cleanup_headers = {"X-CSRF-Token": client.cookies.get("et_csrf", "")}
+            if comment_id:
+                client.delete(f"/api/v1/videos/comments/{comment_id}", headers=cleanup_headers)
+            if video_id:
+                client.delete(f"/api/v1/videos/{video_id}", headers=cleanup_headers)
